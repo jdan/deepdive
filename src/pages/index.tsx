@@ -125,14 +125,18 @@ function Cell({
           "bg-purple-100": tree.role === "assistant",
         })}
       >
-        <textarea
-          className="p-2 resize-none w-full rounded-md"
-          value={tree.content}
-          onChange={(e) =>
-            setTree((tree) => ({ ...tree, content: e.target.value }))
-          }
-          rows={tree.content.split("\n").length}
-        />
+        {tree.role === "user" ? (
+          <textarea
+            className="p-2 resize-none w-full rounded-md"
+            value={tree.content}
+            onChange={(e) =>
+              setTree((tree) => ({ ...tree, content: e.target.value }))
+            }
+            rows={tree.content.split("\n").length}
+          />
+        ) : (
+          <div className="p-2">{tree.content}</div>
+        )}
         <div className="flex flex-row gap-2">
           <button
             className="bg-blue-500 text-white rounded-md p-2"
