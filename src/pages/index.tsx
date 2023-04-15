@@ -1,6 +1,6 @@
 import classnames from "classnames";
 import qs from "qs";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type role = "assistant" | "user" | "system";
 
@@ -39,17 +39,16 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="p-24">
+    <main className="p-24 bg-slate-50 min-h-screen">
       {/* button to copy json to clipboard */}
       <div className="flex flex-row mb-8">
-        <button
-          className="bg-green-500 text-white rounded-md p-2"
+        <Button
           onClick={() => {
             navigator.clipboard.writeText(JSON.stringify(forest));
           }}
         >
           Copy JSON
-        </button>
+        </Button>
       </div>
 
       {forest.map((tree, idx) => (
@@ -76,6 +75,41 @@ interface CellProps {
 }
 
 function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // focus the input when it's added
+  useEffect(() => {
+    if (tree.role === "user") {
+      inputRef.current?.focus();
+    }
+  }, [tree.role]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        // append a new child
+        setTree((tree) => ({
+          ...tree,
+          children: [
+            ...tree.children,
+            {
+              role: "user",
+              content: "",
+              children: [],
+            },
+          ],
+        }));
+      } else if (e.key === "Backspace" && !e.shiftKey) {
+        if (tree.content === "") {
+          e.preventDefault();
+          onDelete?.();
+        }
+      }
+    },
+    [setTree, onDelete, tree.content]
+  );
+
   const handleAiClick = useCallback(() => {
     // Save the index for later
     const idx = tree.children.length;
@@ -131,25 +165,28 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
   return (
     <div className="w-96">
       <div
-        className={classnames("p-4 rounded-md shadow-md", {
+        className={classnames("py-2 rounded-md", {
           "bg-purple-100": tree.role === "assistant",
         })}
       >
         {tree.role === "user" ? (
           <textarea
-            className="p-2 resize-none w-full rounded-md"
+            placeholder="Type your message here..."
+            ref={inputRef}
+            className="p-1 resize-none w-full rounded-md bg-transparent"
             value={tree.content}
             onChange={(e) =>
               setTree((tree) => ({ ...tree, content: e.target.value }))
             }
+            onKeyDown={handleKeyDown}
             rows={tree.content.split("\n").length}
           />
         ) : (
-          <div className="p-2">{tree.content}</div>
+          <div className="p-1">{tree.content}</div>
         )}
-        <div className="flex flex-row gap-2">
-          <button
-            className="bg-blue-500 text-white rounded-md p-2"
+
+        <div className="flex flex-row gap-2 mt-1">
+          <Button
             onClick={() =>
               setTree((tree) => ({
                 ...tree,
@@ -165,25 +202,13 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
             }
           >
             Add Child
-          </button>
+          </Button>
 
           {tree.role === "user" && (
-            <button
-              className="bg-purple-500 text-white rounded-md p-2"
-              onClick={handleAiClick}
-            >
-              Add AI ✨
-            </button>
+            <Button onClick={handleAiClick}>Ask AI ✨</Button>
           )}
 
-          {onDelete && (
-            <button
-              className="bg-red-500 text-white rounded-md p-2"
-              onClick={onDelete}
-            >
-              Delete
-            </button>
-          )}
+          {onDelete && <Button onClick={onDelete}>Delete</Button>}
         </div>
       </div>
       <div className="mt-8 ml-8 flex flex-col">
@@ -205,10 +230,27 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
                 ...tree,
                 children: tree.children.filter((_, i) => i !== idx),
               }));
+              // focus my input
+              inputRef.current?.focus();
             }}
           />
         ))}
       </div>
     </div>
+  );
+}
+
+interface ButtonProps {
+  onClick: () => void;
+  children: React.ReactNode;
+}
+function Button({ children, onClick }: ButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-xs p-1 rounded-sm hover:bg-slate-200 text-slate-500"
+    >
+      {children}
+    </button>
   );
 }
