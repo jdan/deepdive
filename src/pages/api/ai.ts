@@ -39,6 +39,10 @@ export default async function handler(
           role: "system",
           content: "Output using markdown",
         },
+        {
+          role: "system",
+          content: "Surround equations with $",
+        },
         ...messages,
       ],
       stream: true,

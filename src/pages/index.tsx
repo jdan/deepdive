@@ -1,6 +1,7 @@
 import classnames from "classnames";
 import hljs from "highlight.js";
 import { marked } from "marked";
+import markedKatex from "marked-katex-extension";
 import qs from "qs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -10,6 +11,12 @@ marked.setOptions({
     return hljs.highlight(code, { language }).value;
   },
 });
+
+const options = {
+  throwOnError: false,
+};
+
+marked.use(markedKatex(options));
 
 type role = "assistant" | "user";
 
