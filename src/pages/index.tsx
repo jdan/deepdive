@@ -58,7 +58,7 @@ export default function Home() {
   return (
     <main className="p-24 bg-slate-50 min-h-screen">
       {/* button to copy json to clipboard */}
-      <div className="flex flex-row mb-8">
+      <div className="flex flex-row fixed top-8 right-8">
         <Button
           role="user"
           onClick={() => {
@@ -230,13 +230,14 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
             "bg-purple-100": tree.role === "assistant",
             "py-2": tree.role === "user",
             "p-2": tree.role === "assistant",
+            "w-full": tree.role === "user",
           })}
         >
           {tree.role === "user" ? (
             <textarea
               placeholder="Type your message here..."
               ref={inputRef}
-              className="p-1 resize-none w-full rounded-md bg-transparent"
+              className="p-1 resize-none w-full rounded-md bg-transparent outline-none"
               value={tree.content}
               onChange={(e) =>
                 setTree((tree) => ({ ...tree, content: e.target.value }))
@@ -282,7 +283,7 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
                 }))
               }
             >
-              Add Child
+              Add child
             </Button>
 
             {onDelete && (
