@@ -1,5 +1,6 @@
 import classnames from "classnames";
-import { useEffect, useState } from "react";
+import qs from "qs";
+import { useCallback, useEffect, useState } from "react";
 
 type role = "assistant" | "user" | "system";
 
@@ -55,9 +56,12 @@ export default function Home() {
         <Cell
           key={idx}
           tree={tree}
-          setTree={(newTree: Tree) => {
-            setForest(forest.map((t, i) => (i === idx ? newTree : t)));
+          setTree={(callback) => {
+            setForest((forest) =>
+              forest.map((f, i) => (i === idx ? callback(f) : f))
+            );
           }}
+          transcript={[]}
           canChangeRole={false}
         />
       ))}
@@ -67,12 +71,53 @@ export default function Home() {
 
 interface CellProps {
   tree: Tree;
-  setTree: (newTree: Tree) => void;
+  setTree: (callback: (tree: Tree) => Tree) => void;
+  transcript: Tree[];
   canChangeRole: boolean;
   onDelete?: () => void;
 }
 
-function Cell({ tree, setTree, onDelete, canChangeRole }: CellProps) {
+function Cell({
+  tree,
+  setTree,
+  onDelete,
+  canChangeRole,
+  transcript,
+}: CellProps) {
+  const handleAiClick = useCallback(() => {
+    setTree((tree) => ({ ...tree, role: "assistant" }));
+
+    // transcript without any children fields
+    const transcriptWithoutChildren: Record<string, string>[] = transcript.map(
+      (t) => ({
+        role: t.role,
+        content: t.content,
+      })
+    );
+    const searchParams = qs.stringify({
+      transcript: transcriptWithoutChildren,
+    });
+
+    const aiStream = new EventSource(`/api/ai?${searchParams}`);
+    // cleanup?
+    aiStream.addEventListener("message", (e) => {
+      if (e.data === "[DONE]") {
+        aiStream.close();
+        return;
+      }
+
+      const message = JSON.parse(e.data);
+      const delta = message.choices[0].delta.content;
+
+      if (delta) {
+        setTree((tree: Tree) => ({
+          ...tree,
+          content: tree.content + delta,
+        }));
+      }
+    });
+  }, [setTree, transcript]);
+
   return (
     <div className="w-96">
       <div
@@ -83,14 +128,16 @@ function Cell({ tree, setTree, onDelete, canChangeRole }: CellProps) {
         <textarea
           className="p-2 resize-none w-full rounded-md"
           value={tree.content}
-          onChange={(e) => setTree({ ...tree, content: e.target.value })}
+          onChange={(e) =>
+            setTree((tree) => ({ ...tree, content: e.target.value }))
+          }
           rows={tree.content.split("\n").length}
         />
         <div className="flex flex-row gap-2">
           <button
             className="bg-blue-500 text-white rounded-md p-2"
             onClick={() =>
-              setTree({
+              setTree((tree) => ({
                 ...tree,
                 children: [
                   ...tree.children,
@@ -100,7 +147,7 @@ function Cell({ tree, setTree, onDelete, canChangeRole }: CellProps) {
                     children: [],
                   },
                 ],
-              })
+              }))
             }
           >
             Add Child
@@ -119,7 +166,7 @@ function Cell({ tree, setTree, onDelete, canChangeRole }: CellProps) {
           {canChangeRole && tree.role === "user" && (
             <button
               className="bg-purple-500 text-white rounded-md p-2"
-              onClick={() => setTree({ ...tree, role: "assistant" })}
+              onClick={handleAiClick}
             >
               AI
             </button>
@@ -132,19 +179,20 @@ function Cell({ tree, setTree, onDelete, canChangeRole }: CellProps) {
             canChangeRole
             key={idx}
             tree={child}
-            setTree={(newTree) => {
-              setTree({
+            transcript={[...transcript, tree]}
+            setTree={(callback) => {
+              setTree((tree) => ({
                 ...tree,
                 children: tree.children.map((c, i) =>
-                  i === idx ? newTree : c
+                  i === idx ? callback(c) : c
                 ),
-              });
+              }));
             }}
             onDelete={() => {
-              setTree({
+              setTree((callback) => ({
                 ...tree,
-                children: tree.children.filter((c, i) => i !== idx),
-              });
+                children: tree.children.filter((_, i) => i !== idx),
+              }));
             }}
           />
         ))}
