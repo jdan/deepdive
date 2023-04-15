@@ -35,14 +35,28 @@ export default function Home() {
 interface CellProps {
   tree: Tree;
   setTree: (newTree: Tree) => void;
+  onDelete?: () => void;
 }
 
-function Cell({ tree, setTree }: CellProps) {
+function Cell({ tree, setTree, onDelete }: CellProps) {
   return (
     <div>
+      {/* delete button */}
+      {onDelete && (
+        <div className="flex flex-row">
+          <button
+            className="bg-red-500 text-white rounded-md p-2"
+            onClick={onDelete}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+
       <textarea
         value={tree.content}
         onChange={(e) => setTree({ ...tree, content: e.target.value })}
+        rows={tree.content.split("\n").length}
       />
       <div className="flex flex-row">
         <button
@@ -74,6 +88,12 @@ function Cell({ tree, setTree }: CellProps) {
                 children: tree.children.map((c, i) =>
                   i === idx ? newTree : c
                 ),
+              });
+            }}
+            onDelete={() => {
+              setTree({
+                ...tree,
+                children: tree.children.filter((c, i) => i !== idx),
               });
             }}
           />
