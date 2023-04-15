@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type role = "assistant" | "user" | "system";
 
@@ -18,10 +18,41 @@ export default function Home() {
     },
   ]);
 
+  // when pasting into the window, set the forest to that json
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const json = e.clipboardData?.getData("text/plain");
+      if (json) {
+        try {
+          const newForest = JSON.parse(json);
+          setForest(newForest);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
+
   return (
     <main className="p-24">
+      {/* button to copy json to clipboard */}
+      <div className="flex flex-row">
+        <button
+          className="bg-green-500 text-white rounded-md p-2"
+          onClick={() => {
+            navigator.clipboard.writeText(JSON.stringify(forest));
+          }}
+        >
+          Copy JSON
+        </button>
+      </div>
+
       {forest.map((tree, idx) => (
         <Cell
+          key={idx}
           tree={tree}
           setTree={(newTree: Tree) => {
             setForest(forest.map((t, i) => (i === idx ? newTree : t)));
@@ -81,6 +112,7 @@ function Cell({ tree, setTree, onDelete }: CellProps) {
       <div className="ml-4">
         {tree.children.map((child, idx) => (
           <Cell
+            key={idx}
             tree={child}
             setTree={(newTree) => {
               setTree({
