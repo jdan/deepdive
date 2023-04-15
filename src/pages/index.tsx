@@ -29,6 +29,8 @@ interface Tree {
 }
 
 export default function Home() {
+  const [copyLabel, setCopyLabel] = useState("Copy transcript");
+
   // TODO: Not good that it's a tree but that's okay
   const [forest, setForest] = useState<Tree[]>([
     {
@@ -66,9 +68,13 @@ export default function Home() {
           role="user"
           onClick={() => {
             navigator.clipboard.writeText(JSON.stringify(forest));
+            setCopyLabel("Copied! Paste it anywhere (or back here)");
+            setTimeout(() => {
+              setCopyLabel("Copy transcript");
+            }, 3000);
           }}
         >
-          Copy transcript
+          {copyLabel}
         </Button>
       </div>
 
