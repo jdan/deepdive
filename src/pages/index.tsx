@@ -1,3 +1,4 @@
+import classnames from "classnames";
 import { useEffect, useState } from "react";
 
 type role = "assistant" | "user" | "system";
@@ -39,7 +40,7 @@ export default function Home() {
   return (
     <main className="p-24">
       {/* button to copy json to clipboard */}
-      <div className="flex flex-row">
+      <div className="flex flex-row mb-8">
         <button
           className="bg-green-500 text-white rounded-md p-2"
           onClick={() => {
@@ -57,6 +58,7 @@ export default function Home() {
           setTree={(newTree: Tree) => {
             setForest(forest.map((t, i) => (i === idx ? newTree : t)));
           }}
+          canChangeRole={false}
         />
       ))}
     </main>
@@ -66,52 +68,68 @@ export default function Home() {
 interface CellProps {
   tree: Tree;
   setTree: (newTree: Tree) => void;
+  canChangeRole: boolean;
   onDelete?: () => void;
 }
 
-function Cell({ tree, setTree, onDelete }: CellProps) {
+function Cell({ tree, setTree, onDelete, canChangeRole }: CellProps) {
   return (
-    <div>
-      {/* delete button */}
-      {onDelete && (
-        <div className="flex flex-row">
+    <div className="w-96">
+      <div
+        className={classnames("p-4 rounded-md shadow-md", {
+          "bg-purple-100": tree.role === "assistant",
+        })}
+      >
+        <textarea
+          className="p-2 resize-none w-full rounded-md"
+          value={tree.content}
+          onChange={(e) => setTree({ ...tree, content: e.target.value })}
+          rows={tree.content.split("\n").length}
+        />
+        <div className="flex flex-row gap-2">
           <button
-            className="bg-red-500 text-white rounded-md p-2"
-            onClick={onDelete}
+            className="bg-blue-500 text-white rounded-md p-2"
+            onClick={() =>
+              setTree({
+                ...tree,
+                children: [
+                  ...tree.children,
+                  {
+                    role: "user",
+                    content: "",
+                    children: [],
+                  },
+                ],
+              })
+            }
           >
-            Delete
+            Add Child
           </button>
-        </div>
-      )}
 
-      <textarea
-        value={tree.content}
-        onChange={(e) => setTree({ ...tree, content: e.target.value })}
-        rows={tree.content.split("\n").length}
-      />
-      <div className="flex flex-row">
-        <button
-          className="bg-blue-500 text-white rounded-md p-2"
-          onClick={() =>
-            setTree({
-              ...tree,
-              children: [
-                ...tree.children,
-                {
-                  role: "user",
-                  content: "",
-                  children: [],
-                },
-              ],
-            })
-          }
-        >
-          Add Child
-        </button>
+          {onDelete && (
+            <button
+              className="bg-red-500 text-white rounded-md p-2"
+              onClick={onDelete}
+            >
+              Delete
+            </button>
+          )}
+
+          {/* convert to assistant */}
+          {canChangeRole && tree.role === "user" && (
+            <button
+              className="bg-purple-500 text-white rounded-md p-2"
+              onClick={() => setTree({ ...tree, role: "assistant" })}
+            >
+              AI
+            </button>
+          )}
+        </div>
       </div>
-      <div className="ml-4">
+      <div className="mt-8 ml-8 flex flex-col">
         {tree.children.map((child, idx) => (
           <Cell
+            canChangeRole
             key={idx}
             tree={child}
             setTree={(newTree) => {
