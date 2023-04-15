@@ -22,6 +22,7 @@ marked.use(markedKatex(options));
 type role = "assistant" | "user";
 
 interface Tree {
+  id: string;
   role: role;
   content: string;
   children: Tree[];
@@ -31,6 +32,8 @@ export default function Home() {
   // TODO: Not good that it's a tree but that's okay
   const [forest, setForest] = useState<Tree[]>([
     {
+      // set as a new uuid
+      id: "root",
       role: "user",
       content: "",
       children: [],
@@ -72,7 +75,7 @@ export default function Home() {
       <div className="-ml-6">
         {forest.map((tree, idx) => (
           <Cell
-            key={idx}
+            key={tree.id}
             tree={tree}
             setTree={(callback) => {
               setForest((forest) =>
@@ -107,15 +110,15 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
   }, [tree.role]);
 
   const handleAskAiClick = useCallback(() => {
-    // Save the index for later
-    const idx = tree.children.length;
-
+    // save an ID
+    const id = crypto.randomUUID();
     // append a child with role assistant
     setTree((tree) => ({
       ...tree,
       children: [
         ...tree.children,
         {
+          id,
           role: "assistant",
           content: "",
           children: [],
@@ -150,8 +153,8 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
         // update the child at idx
         setTree((tree) => ({
           ...tree,
-          children: tree.children.map((c, i) =>
-            i === idx ? { ...c, content: c.content + delta } : c
+          children: tree.children.map((c) =>
+            c.id === id ? { ...c, content: c.content + delta } : c
           ),
         }));
       }
@@ -275,6 +278,7 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
                   children: [
                     ...tree.children,
                     {
+                      id: crypto.randomUUID(),
                       role: "user",
                       content: "",
                       children: [],
@@ -301,23 +305,23 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
             hidden: !expanded,
           })}
         >
-          {tree.children.map((child, idx) => (
+          {tree.children.map((child) => (
             <Cell
-              key={idx}
+              key={child.id}
               tree={child}
               transcript={[...transcript, tree]}
               setTree={(callback) => {
                 setTree((tree) => ({
                   ...tree,
-                  children: tree.children.map((c, i) =>
-                    i === idx ? callback(c) : c
+                  children: tree.children.map((c) =>
+                    c.id === child.id ? callback(c) : c
                   ),
                 }));
               }}
               onDelete={() => {
                 setTree((callback) => ({
                   ...tree,
-                  children: tree.children.filter((_, i) => i !== idx),
+                  children: tree.children.filter((c) => c.id !== child.id),
                 }));
                 // focus my input
                 inputRef.current?.focus();
