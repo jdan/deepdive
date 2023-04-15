@@ -1,8 +1,17 @@
 import classnames from "classnames";
+import hljs from "highlight.js";
+import { marked } from "marked";
 import qs from "qs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type role = "assistant" | "user" | "system";
+marked.setOptions({
+  highlight: function (code, lang) {
+    const language = hljs.getLanguage(lang) ? lang : "plaintext";
+    return hljs.highlight(code, { language }).value;
+  },
+});
+
+type role = "assistant" | "user";
 
 interface Tree {
   role: role;
@@ -15,7 +24,7 @@ export default function Home() {
   const [forest, setForest] = useState<Tree[]>([
     {
       role: "user",
-      content: "Hello, world!",
+      content: "",
       children: [],
     },
   ]);
@@ -43,11 +52,12 @@ export default function Home() {
       {/* button to copy json to clipboard */}
       <div className="flex flex-row mb-8">
         <Button
+          role="user"
           onClick={() => {
             navigator.clipboard.writeText(JSON.stringify(forest));
           }}
         >
-          Copy JSON
+          Copy transcript
         </Button>
       </div>
 
@@ -80,7 +90,7 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
   // focus the input when it's added
   useEffect(() => {
     if (tree.role === "user") {
-      inputRef.current?.focus();
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [tree.role]);
 
@@ -110,7 +120,7 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
     [setTree, onDelete, tree.content]
   );
 
-  const handleAiClick = useCallback(() => {
+  const handleAskAiClick = useCallback(() => {
     // Save the index for later
     const idx = tree.children.length;
 
@@ -162,11 +172,50 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
     });
   }, [setTree, transcript, tree]);
 
+  const handleRegenerateAiClick = useCallback(() => {
+    setTree((tree) => ({
+      ...tree,
+      content: "",
+    }));
+
+    // transcript without any children fields
+    const transcriptWithoutChildren: Record<string, string>[] = transcript.map(
+      (t) => ({
+        role: t.role,
+        content: t.content,
+      })
+    );
+    const searchParams = qs.stringify({
+      transcript: transcriptWithoutChildren,
+    });
+
+    const aiStream = new EventSource(`/api/ai?${searchParams}`);
+    // cleanup?
+    aiStream.addEventListener("message", (e) => {
+      if (e.data === "[DONE]") {
+        aiStream.close();
+        return;
+      }
+
+      const message = JSON.parse(e.data);
+      const delta = message.choices[0].delta.content;
+
+      if (delta) {
+        setTree((tree) => ({
+          ...tree,
+          content: tree.content + delta,
+        }));
+      }
+    });
+  }, [setTree, transcript]);
+
   return (
-    <div className="w-96">
+    <div className="w-full">
       <div
-        className={classnames("py-2 rounded-md", {
+        className={classnames("rounded-md w-96", {
           "bg-purple-100": tree.role === "assistant",
+          "py-2": tree.role === "user",
+          "p-2": tree.role === "assistant",
         })}
       >
         {tree.role === "user" ? (
@@ -182,11 +231,17 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
             rows={tree.content.split("\n").length}
           />
         ) : (
-          <div className="p-1">{tree.content}</div>
+          <div
+            className="p-1"
+            dangerouslySetInnerHTML={{
+              __html: tree.content ? marked(tree.content) : "Thinking...",
+            }}
+          />
         )}
 
         <div className="flex flex-row gap-2 mt-1">
           <Button
+            role={tree.role}
             onClick={() =>
               setTree((tree) => ({
                 ...tree,
@@ -205,13 +260,25 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
           </Button>
 
           {tree.role === "user" && (
-            <Button onClick={handleAiClick}>Ask AI ✨</Button>
+            <Button role={tree.role} onClick={handleAskAiClick}>
+              Ask AI ✨
+            </Button>
           )}
 
-          {onDelete && <Button onClick={onDelete}>Delete</Button>}
+          {tree.role === "assistant" && (
+            <Button role={tree.role} onClick={handleRegenerateAiClick}>
+              Regenerate ✨
+            </Button>
+          )}
+
+          {onDelete && (
+            <Button role={tree.role} onClick={onDelete}>
+              Delete
+            </Button>
+          )}
         </div>
       </div>
-      <div className="mt-8 ml-8 flex flex-col">
+      <div className="mt-2 ml-6 flex flex-col">
         {tree.children.map((child, idx) => (
           <Cell
             key={idx}
@@ -243,12 +310,20 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
 interface ButtonProps {
   onClick: () => void;
   children: React.ReactNode;
+  role: role;
 }
-function Button({ children, onClick }: ButtonProps) {
+function Button({ children, onClick, role }: ButtonProps) {
+  const isPurple = role === "assistant";
+
   return (
     <button
       onClick={onClick}
-      className="text-xs p-1 rounded-sm hover:bg-slate-200 text-slate-500"
+      className={classnames("text-xs p-1 rounded-sm", {
+        "hover:bg-slate-200": !isPurple,
+        "hover:bg-purple-200": isPurple,
+        "text-slate-500": !isPurple,
+        "text-slate-600": isPurple,
+      })}
     >
       {children}
     </button>

@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* import highlightjs */
+@import "highlight.js/styles/github.css";
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
@@ -18,4 +21,23 @@
 
 body {
   color: rgb(var(--foreground-rgb));
+}
+
+ol,
+ul {
+  list-style: inherit;
+  padding-left: 1em;
+}
+
+td {
+  padding: 0.25em;
+}
+
+tbody tr:nth-of-type(odd) {
+  background-color: rgba(var(--foreground-rgb), 0.05);
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1em 0;
 }
