@@ -229,7 +229,10 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
           ▶
         </Button>
         <div
-          className={classnames("rounded-md w-96", {
+          style={{
+            width: 660,
+          }}
+          className={classnames("rounded-md", {
             "bg-purple-100": tree.role === "assistant",
             "py-2": tree.role === "user",
             "p-2": tree.role === "assistant",
