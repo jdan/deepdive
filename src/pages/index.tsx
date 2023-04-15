@@ -62,7 +62,6 @@ export default function Home() {
             );
           }}
           transcript={[]}
-          canChangeRole={false}
         />
       ))}
     </main>
@@ -73,27 +72,35 @@ interface CellProps {
   tree: Tree;
   setTree: (callback: (tree: Tree) => Tree) => void;
   transcript: Tree[];
-  canChangeRole: boolean;
   onDelete?: () => void;
 }
 
-function Cell({
-  tree,
-  setTree,
-  onDelete,
-  canChangeRole,
-  transcript,
-}: CellProps) {
+function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
   const handleAiClick = useCallback(() => {
-    setTree((tree) => ({ ...tree, role: "assistant" }));
+    // Save the index for later
+    const idx = tree.children.length;
+
+    // append a child with role assistant
+    setTree((tree) => ({
+      ...tree,
+      children: [
+        ...tree.children,
+        {
+          role: "assistant",
+          content: "",
+          children: [],
+        },
+      ],
+    }));
 
     // transcript without any children fields
-    const transcriptWithoutChildren: Record<string, string>[] = transcript.map(
-      (t) => ({
-        role: t.role,
-        content: t.content,
-      })
-    );
+    const transcriptWithoutChildren: Record<string, string>[] = [
+      ...transcript,
+      tree,
+    ].map((t) => ({
+      role: t.role,
+      content: t.content,
+    }));
     const searchParams = qs.stringify({
       transcript: transcriptWithoutChildren,
     });
@@ -110,13 +117,16 @@ function Cell({
       const delta = message.choices[0].delta.content;
 
       if (delta) {
-        setTree((tree: Tree) => ({
+        // update the child at idx
+        setTree((tree) => ({
           ...tree,
-          content: tree.content + delta,
+          children: tree.children.map((c, i) =>
+            i === idx ? { ...c, content: c.content + delta } : c
+          ),
         }));
       }
     });
-  }, [setTree, transcript]);
+  }, [setTree, transcript, tree]);
 
   return (
     <div className="w-96">
@@ -157,6 +167,15 @@ function Cell({
             Add Child
           </button>
 
+          {tree.role === "user" && (
+            <button
+              className="bg-purple-500 text-white rounded-md p-2"
+              onClick={handleAiClick}
+            >
+              Add AI ✨
+            </button>
+          )}
+
           {onDelete && (
             <button
               className="bg-red-500 text-white rounded-md p-2"
@@ -165,22 +184,11 @@ function Cell({
               Delete
             </button>
           )}
-
-          {/* convert to assistant */}
-          {canChangeRole && tree.role === "user" && (
-            <button
-              className="bg-purple-500 text-white rounded-md p-2"
-              onClick={handleAiClick}
-            >
-              AI
-            </button>
-          )}
         </div>
       </div>
       <div className="mt-8 ml-8 flex flex-col">
         {tree.children.map((child, idx) => (
           <Cell
-            canChangeRole
             key={idx}
             tree={child}
             transcript={[...transcript, tree]}

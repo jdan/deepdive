@@ -34,7 +34,13 @@ export default async function handler(
   const completion = await openai.createChatCompletion(
     {
       model: "gpt-3.5-turbo",
-      messages,
+      messages: [
+        {
+          role: "system",
+          content: "Output using markdown",
+        },
+        ...messages,
+      ],
       stream: true,
     },
     { responseType: "stream" }
