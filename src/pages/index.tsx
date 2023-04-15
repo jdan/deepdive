@@ -1,9 +1,10 @@
+import classNames from "classnames";
 import classnames from "classnames";
 import hljs from "highlight.js";
 import { marked } from "marked";
 import markedKatex from "marked-katex-extension";
 import qs from "qs";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 marked.setOptions({
   highlight: function (code, lang) {
@@ -68,18 +69,20 @@ export default function Home() {
         </Button>
       </div>
 
-      {forest.map((tree, idx) => (
-        <Cell
-          key={idx}
-          tree={tree}
-          setTree={(callback) => {
-            setForest((forest) =>
-              forest.map((f, i) => (i === idx ? callback(f) : f))
-            );
-          }}
-          transcript={[]}
-        />
-      ))}
+      <div className="-ml-6">
+        {forest.map((tree, idx) => (
+          <Cell
+            key={idx}
+            tree={tree}
+            setTree={(callback) => {
+              setForest((forest) =>
+                forest.map((f, i) => (i === idx ? callback(f) : f))
+              );
+            }}
+            transcript={[]}
+          />
+        ))}
+      </div>
     </main>
   );
 }
@@ -92,6 +95,8 @@ interface CellProps {
 }
 
 function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
+  const [expanded, setExpanded] = useState(true);
+
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // focus the input when it's added
@@ -100,32 +105,6 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [tree.role]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        // append a new child
-        setTree((tree) => ({
-          ...tree,
-          children: [
-            ...tree.children,
-            {
-              role: "user",
-              content: "",
-              children: [],
-            },
-          ],
-        }));
-      } else if (e.key === "Backspace" && !e.shiftKey) {
-        if (tree.content === "") {
-          e.preventDefault();
-          onDelete?.();
-        }
-      }
-    },
-    [setTree, onDelete, tree.content]
-  );
 
   const handleAskAiClick = useCallback(() => {
     // Save the index for later
@@ -179,6 +158,21 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
     });
   }, [setTree, transcript, tree]);
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleAskAiClick();
+      } else if (e.key === "Backspace" && !e.shiftKey) {
+        if (tree.content === "") {
+          e.preventDefault();
+          onDelete?.();
+        }
+      }
+    },
+    [onDelete, tree.content, handleAskAiClick]
+  );
+
   const handleRegenerateAiClick = useCallback(() => {
     setTree((tree) => ({
       ...tree,
@@ -218,98 +212,119 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
 
   return (
     <div className="w-full">
-      <div
-        className={classnames("rounded-md w-96", {
-          "bg-purple-100": tree.role === "assistant",
-          "py-2": tree.role === "user",
-          "p-2": tree.role === "assistant",
-        })}
-      >
-        {tree.role === "user" ? (
-          <textarea
-            placeholder="Type your message here..."
-            ref={inputRef}
-            className="p-1 resize-none w-full rounded-md bg-transparent"
-            value={tree.content}
-            onChange={(e) =>
-              setTree((tree) => ({ ...tree, content: e.target.value }))
-            }
-            onKeyDown={handleKeyDown}
-            rows={tree.content.split("\n").length}
-          />
-        ) : (
-          <div
-            className="p-1"
-            dangerouslySetInnerHTML={{
-              __html: tree.content ? marked(tree.content) : "Thinking...",
-            }}
-          />
-        )}
-
-        <div className="flex flex-row gap-2 mt-1">
-          <Button
-            role={tree.role}
-            onClick={() =>
-              setTree((tree) => ({
-                ...tree,
-                children: [
-                  ...tree.children,
-                  {
-                    role: "user",
-                    content: "",
-                    children: [],
-                  },
-                ],
-              }))
-            }
-          >
-            Add Child
-          </Button>
-
-          {tree.role === "user" && (
-            <Button role={tree.role} onClick={handleAskAiClick}>
-              Ask AI ✨
-            </Button>
+      <div className="mt-2 flex flex-row items-start gap-2">
+        <Button
+          disabled={!tree.children.length}
+          disableHover
+          className={classnames("mt-3 transition-transform", {
+            "rotate-90": tree.children.length && expanded,
+            "opacity-50": !tree.children.length,
+          })}
+          role="user"
+          onClick={() => setExpanded(!expanded)}
+        >
+          ▶
+        </Button>
+        <div
+          className={classnames("rounded-md w-96", {
+            "bg-purple-100": tree.role === "assistant",
+            "py-2": tree.role === "user",
+            "p-2": tree.role === "assistant",
+          })}
+        >
+          {tree.role === "user" ? (
+            <textarea
+              placeholder="Type your message here..."
+              ref={inputRef}
+              className="p-1 resize-none w-full rounded-md bg-transparent"
+              value={tree.content}
+              onChange={(e) =>
+                setTree((tree) => ({ ...tree, content: e.target.value }))
+              }
+              onKeyDown={handleKeyDown}
+              rows={1}
+            />
+          ) : (
+            <div
+              className="p-1"
+              dangerouslySetInnerHTML={{
+                __html: tree.content ? marked(tree.content) : "Thinking...",
+              }}
+            />
           )}
 
-          {tree.role === "assistant" && (
-            <Button role={tree.role} onClick={handleRegenerateAiClick}>
-              Regenerate ✨
-            </Button>
-          )}
+          <div className="flex flex-row gap-2 mt-1">
+            {tree.role === "user" && (
+              <Button role={tree.role} onClick={handleAskAiClick}>
+                Ask AI ✨
+              </Button>
+            )}
 
-          {onDelete && (
-            <Button role={tree.role} onClick={onDelete}>
-              Delete
+            {tree.role === "assistant" && (
+              <Button role={tree.role} onClick={handleRegenerateAiClick}>
+                Regenerate ✨
+              </Button>
+            )}
+
+            <Button
+              role={tree.role}
+              onClick={() =>
+                setTree((tree) => ({
+                  ...tree,
+                  children: [
+                    ...tree.children,
+                    {
+                      role: "user",
+                      content: "",
+                      children: [],
+                    },
+                  ],
+                }))
+              }
+            >
+              Add Child
             </Button>
-          )}
+
+            {onDelete && (
+              <Button role={tree.role} onClick={onDelete}>
+                Delete
+              </Button>
+            )}
+          </div>
         </div>
       </div>
-      <div className="mt-2 ml-6 flex flex-col">
-        {tree.children.map((child, idx) => (
-          <Cell
-            key={idx}
-            tree={child}
-            transcript={[...transcript, tree]}
-            setTree={(callback) => {
-              setTree((tree) => ({
-                ...tree,
-                children: tree.children.map((c, i) =>
-                  i === idx ? callback(c) : c
-                ),
-              }));
-            }}
-            onDelete={() => {
-              setTree((callback) => ({
-                ...tree,
-                children: tree.children.filter((_, i) => i !== idx),
-              }));
-              // focus my input
-              inputRef.current?.focus();
-            }}
-          />
-        ))}
-      </div>
+
+      {tree.children.length ? (
+        <div
+          className={classNames("ml-6", {
+            hidden: !expanded,
+          })}
+        >
+          {tree.children.map((child, idx) => (
+            <Cell
+              key={idx}
+              tree={child}
+              transcript={[...transcript, tree]}
+              setTree={(callback) => {
+                setTree((tree) => ({
+                  ...tree,
+                  children: tree.children.map((c, i) =>
+                    i === idx ? callback(c) : c
+                  ),
+                }));
+              }}
+              onDelete={() => {
+                setTree((callback) => ({
+                  ...tree,
+                  children: tree.children.filter((_, i) => i !== idx),
+                }));
+                // focus my input
+                inputRef.current?.focus();
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -318,16 +333,27 @@ interface ButtonProps {
   onClick: () => void;
   children: React.ReactNode;
   role: role;
+  className?: string;
+  disableHover?: boolean;
+  disabled?: boolean;
 }
-function Button({ children, onClick, role }: ButtonProps) {
+function Button({
+  children,
+  onClick,
+  role,
+  className,
+  disableHover,
+  disabled,
+}: ButtonProps) {
   const isPurple = role === "assistant";
 
   return (
     <button
+      disabled={disabled}
       onClick={onClick}
-      className={classnames("text-xs p-1 rounded-sm", {
-        "hover:bg-slate-200": !isPurple,
-        "hover:bg-purple-200": isPurple,
+      className={classnames("text-xs p-1 rounded-sm", className, {
+        "hover:bg-slate-200": !disableHover && !isPurple,
+        "hover:bg-purple-200": !disableHover && isPurple,
         "text-slate-500": !isPurple,
         "text-slate-600": isPurple,
       })}
