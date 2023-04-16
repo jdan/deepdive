@@ -309,7 +309,7 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
             />
           ) : (
             <div
-              className="p-1"
+              className="p-1 flex flex-col gap-4"
               dangerouslySetInnerHTML={{
                 __html: tree.content ? marked(tree.content) : "Thinking...",
               }}
@@ -329,7 +329,7 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
 
             {tree.role === "assistant" && (
               <Button role={tree.role} onClick={handleRegenerateAiClick}>
-                Regenerate ✨
+                Regenerate 🔄
               </Button>
             )}
 
