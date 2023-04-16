@@ -101,18 +101,46 @@ export default function Home() {
       </div>
 
       <div className="-ml-6">
-        {forest.map((tree, idx) => (
+        {forest.map((tree) => (
           <Cell
             key={tree.id}
             tree={tree}
             setTree={(callback) => {
               setForest((forest) =>
-                forest.map((f, i) => (i === idx ? callback(f) : f))
+                forest.map((otherTree) =>
+                  otherTree.id === tree.id ? callback(otherTree) : otherTree
+                )
               );
             }}
             transcript={[]}
+            onDelete={
+              forest.length > 1
+                ? () =>
+                    setForest((forest) =>
+                      forest.filter((otherTree) => otherTree.id !== tree.id)
+                    )
+                : undefined
+            }
           />
         ))}
+
+        <Button
+          className="mt-6"
+          role="user"
+          onClick={() => {
+            setForest((forest) => [
+              ...forest,
+              {
+                id: crypto.randomUUID(),
+                role: "user",
+                content: "",
+                children: [],
+              },
+            ]);
+          }}
+        >
+          + New thread
+        </Button>
       </div>
     </main>
   );
