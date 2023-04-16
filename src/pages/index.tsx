@@ -318,7 +318,11 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
 
           <div className="flex flex-row gap-2 mt-1">
             {tree.role === "user" && (
-              <Button role={tree.role} onClick={handleAskAiClick}>
+              <Button
+                disabled={tree.content.trim().length === 0}
+                role={tree.role}
+                onClick={handleAskAiClick}
+              >
                 Ask AI ✨
               </Button>
             )}
@@ -416,10 +420,11 @@ function Button({
       disabled={disabled}
       onClick={onClick}
       className={classnames("text-xs p-1 rounded-sm", className, {
-        "hover:bg-slate-200": !disableHover && !isPurple,
-        "hover:bg-purple-200": !disableHover && isPurple,
+        "hover:bg-slate-200": !disabled && !disableHover && !isPurple,
+        "hover:bg-purple-200": !disabled && !disableHover && isPurple,
         "text-slate-500": !isPurple,
         "text-slate-600": isPurple,
+        "opacity-50": disabled,
       })}
     >
       {children}
