@@ -29,7 +29,8 @@ interface Tree {
 }
 
 export default function Home() {
-  const [copyLabel, setCopyLabel] = useState("Copy transcript");
+  const [copyLabel, setCopyLabel] = useState("Copy");
+  const [pasteLabel, setPasteLabel] = useState("Paste");
 
   // TODO: Not good that it's a tree but that's okay
   const [forest, setForest] = useState<Tree[]>([
@@ -62,19 +63,40 @@ export default function Home() {
 
   return (
     <main className="p-24 bg-slate-50 min-h-screen">
-      {/* button to copy json to clipboard */}
-      <div className="flex flex-row fixed top-8 right-8">
+      <div className="flex flex-row fixed top-8 right-8 gap-2">
+        {/* button to copy json to clipboard */}
         <Button
           role="user"
           onClick={() => {
             navigator.clipboard.writeText(JSON.stringify(forest));
-            setCopyLabel("Copied! Paste it anywhere (or back here)");
+            setCopyLabel("Copied!");
             setTimeout(() => {
-              setCopyLabel("Copy transcript");
-            }, 3000);
+              setCopyLabel("Copy");
+            }, 1000);
           }}
         >
           {copyLabel}
+        </Button>
+
+        {/* button to paste */}
+        <Button
+          role="user"
+          onClick={() => {
+            navigator.clipboard.readText().then((text) => {
+              try {
+                const newForest = JSON.parse(text);
+                setForest(newForest);
+                setPasteLabel("Pasted!");
+                setTimeout(() => {
+                  setPasteLabel("Paste");
+                }, 1000);
+              } catch (e) {
+                alert("Couldn't parse JSON from clipboard");
+              }
+            });
+          }}
+        >
+          {pasteLabel}
         </Button>
       </div>
 
