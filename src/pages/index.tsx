@@ -4,7 +4,8 @@ import hljs from "highlight.js";
 import { marked } from "marked";
 import markedKatex from "marked-katex-extension";
 import qs from "qs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import TextareaAutosize from "react-textarea-autosize";
 
 marked.setOptions({
   highlight: function (code, lang) {
@@ -296,7 +297,7 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
           })}
         >
           {tree.role === "user" ? (
-            <textarea
+            <TextareaAutosize
               placeholder="Type your message here..."
               ref={inputRef}
               className="p-1 resize-none w-full rounded-md bg-transparent outline-none"
@@ -316,7 +317,7 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
             />
           )}
 
-          <div className="flex flex-row gap-2 mt-1">
+          <div className="flex flex-row gap-2">
             {tree.role === "user" && (
               <Button
                 disabled={tree.content.trim().length === 0}
