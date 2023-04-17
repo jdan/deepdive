@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import classnames from "classnames";
 import hljs from "highlight.js";
 import { marked } from "marked";
@@ -365,7 +364,7 @@ function Cell({ tree, setTree, onDelete, transcript }: CellProps) {
 
       {tree.children.length ? (
         <div
-          className={classNames("ml-6", {
+          className={classnames("ml-6", {
             hidden: !expanded,
           })}
         >
